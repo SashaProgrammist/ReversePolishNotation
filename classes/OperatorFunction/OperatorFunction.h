@@ -3,31 +3,41 @@
 
 #include <vector>
 #include <stdexcept>
-
-#include "../Variable/Variable.h"
+#include <map>
 
 template<class T>
 class OperatorFunction {
 private:
-    size_t countOperands;
-    size_t priority;
+    size_t countOperands{};
+    size_t priority{};
     std::string symbol;
 
-    Variable<T> (*init)(std::vector<Variable<T>>);
+    T (*init)(std::vector<T>);
 
 public:
-    OperatorFunction(size_t countOperands,
-                     size_t priority,
-                     std::string symbol,
-                     Variable<T> (*init)(std::vector<Variable<T>>));
+    OperatorFunction() = default;
 
-    Variable<T> callOperand(std::vector<Variable<T>> operands);
+    OperatorFunction(size_t countOperands, size_t priority, std::string symbol,
+                     T (*init)(std::vector<T>)) :
+            countOperands(countOperands),
+            priority(priority),
+            symbol(std::move(symbol)),
+            init(init) {}
 
-    size_t getCountOperands();
+    T callOperand(std::vector<T> operands) {
+        if (countOperands != operands.size())
+            throw std::invalid_argument("number of operands does not match");
 
-    size_t getPriority();
+        T result = init(operands);
 
-    std::string getSymbol();
+        return result;
+    }
+
+    size_t getCountOperands() { return countOperands; }
+
+    size_t getPriority() { return priority; }
+
+    std::string getSymbol() { return symbol; }
 };
 
 template<class T>
@@ -36,12 +46,29 @@ private:
     std::map<std::string, OperatorFunction<T>> set;
 
 public:
-    explicit SetOperator(std::vector<OperatorFunction<T>> operators);
+    explicit SetOperator(std::vector<OperatorFunction<T>> operators) {
+        for (auto _operator: operators)
+            set[_operator.getSymbol()] = _operator;
+    }
 
-    bool isIn(std::string symbolOperator);
+    bool isIn(std::string symbolOperator) {
+        return set.find(symbolOperator) != set.end();
+    }
 
-    OperatorFunction<T> & getOperator(std::string symbolOperator);
+    bool isIn(char symbolOperator) {
+        return isIn(std::string{symbolOperator});
+    }
+
+    OperatorFunction<T> &getOperator(std::string symbolOperator) {
+        if (!isIn(symbolOperator))
+            throw std::invalid_argument(symbolOperator + " not find");
+
+        return set[symbolOperator];
+    }
+
+    OperatorFunction<T> &getOperator(char symbolOperator) {
+        return getOperator(std::string{symbolOperator});
+    }
 };
-
 
 #endif //REVERSEPOLISHNOTATION_OPERATORFUNCTION_H

@@ -5,30 +5,38 @@
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-    OperatorFunction<int> plus = {
+    OperatorFunction<int> plus{
             2, 1, "+",
-            [](std::vector<Variable<int>> operands) {
-                return Variable<int>{operands[0].getValue() + operands[1].getValue()};
+            [](std::vector<int> operands) {
+                return operands[0] + operands[1];
             }
     };
-
-    OperatorFunction<int> minus = {
+    OperatorFunction<int> minus{
             2, 1, "-",
-            [](std::vector<Variable<int>> operands) {
-                return Variable<int>{operands[0].getValue() - operands[1].getValue()};
+            [](std::vector<int> operands) {
+                return operands[0] - operands[1];
+            }
+    };
+    OperatorFunction<int> multiply{
+            2, 2, "*",
+            [](std::vector<int> operands) {
+                return operands[0] * operands[1];
             }
     };
 
-    SetOperator<int> setOperator(std::vector<OperatorFunction<int>>{plus, minus});
+    std::vector _setOperator{plus, minus, multiply};
+    SetOperator setOperator{_setOperator};
 
-    Function<int> function = {"A+B", setOperator};
+    Function<int> function{"A*((A+A)*B)", setOperator};
 
-    SetVariable<int> setVariable(std::map<std::string, Variable<int>>{
-            {"A", variablesOnStack<int>(1)},
-            {"B", variablesOnStack<int>(1)}
-    });
+    int A(2);
+    int B(3);
+    SetVariable<int> setVariable{std::map<std::string, int>{
+            {"A", A},
+            {"B", B}
+    }};
 
-    int result = function.call(setVariable).getValue();
+    int result = function.call(setVariable);
 
     std::cout << result << std::endl;
 

@@ -5,47 +5,48 @@
 #include <string>
 #include <stdexcept>
 
-template<class T>
-class Variable {
-protected:
-    T value;
-public:
-    explicit Variable(T variable);
-
-    T &getValue();
-
-    virtual void clear();
-
-    virtual T copy();
-};
 
 template<class T>
-class variablesOnStack : public Variable<T> {
-protected:
-    T value;
-public:
-    explicit variablesOnStack(T variable);
-
-    void clear();
-
-    T copy();
-};
-
-template<class T>
-class SetVariable{
+class SetVariable {
 private:
-    std::map<std::string, Variable<T>> setVariable;
+    std::map<std::string, T> setVariable;
 
     std::string nameVariables;
 
 public:
-    explicit SetVariable(std::map<std::string, Variable<T>> setVariable);
+    explicit SetVariable(std::map<std::string, T> setVariable) :
+            setVariable(setVariable) {
+        for (auto variable: this->setVariable)
+            nameVariables += variable.first;
+    }
 
-    bool isEqualVariables(const std::string &functionVariables);
+    bool isEqualVariables(const std::string &functionVariables) {
+        return any_of(
+                functionVariables.begin(),
+                functionVariables.end(),
+                [this](auto name) {
+                    return nameVariables.find(name) != std::string::npos;
+                });
+    }
 
-    bool isIn(std::string symbol);
+    bool isIn(const std::string symbol) {
+        return setVariable.find(symbol) != setVariable.end();
+    }
 
-    Variable<T> getVariable(std::string symbol);
+    bool isIn(const char symbol) {
+        return isIn(std::string{symbol});
+    }
+
+    T &getVariable(std::string const symbol) {
+        if (!isIn(symbol))
+            throw std::invalid_argument(symbol + " not find");
+
+        return setVariable[symbol];
+    }
+
+    T &getVariable(const char symbol) {
+        return getVariable(std::string{symbol});
+    }
 };
 
 #endif //REVERSEPOLISHNOTATION_VARIABLE_H
