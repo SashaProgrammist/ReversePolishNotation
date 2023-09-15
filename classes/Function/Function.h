@@ -7,6 +7,13 @@
 #include "../OperatorFunction/OperatorFunction.h"
 #include "../Variable/Variable.h"
 
+#define FREE_BUFFER_BEFORE_BRACKET                          \
+while (!buffer.empty() && buffer.end()[-1] != '(') {        \
+    result += buffer.end()[-1];                             \
+    buffer.pop_back();                                      \
+}                                                           \
+if (buffer.empty())                                         \
+    throw std::invalid_argument("missing opening bracket");
 
 template<class T>
 std::string getExpression(std::string &expression, SetOperator<T> &operators) {
@@ -28,19 +35,14 @@ std::string getExpression(std::string &expression, SetOperator<T> &operators) {
             buffer += symbol;
         } else
             switch (symbol) {
-                case ',': //TODO
+                case ',':
+                    FREE_BUFFER_BEFORE_BRACKET
                     break;
                 case '(':
                     buffer += symbol;
                     break;
                 case ')':
-                    while (!buffer.empty() && buffer.end()[-1] != '(') {
-                        result += buffer.end()[-1];
-                        buffer.pop_back();
-                    }
-
-                    if (buffer.empty())
-                        throw std::invalid_argument("missing opening bracket");
+                    FREE_BUFFER_BEFORE_BRACKET
 
                     buffer.pop_back();
                     break;
@@ -69,9 +71,8 @@ std::string getName(std::string &expression, SetOperator<T> &operators) {
     size_t size = symbolsNotOperators.size();
 
     std::string result;
-    for (int i = 0; i <= size; ++i)
-        if (i == size ||
-            symbolsNotOperators[i] != symbolsNotOperators[i + 1])
+    for (int i = 0; i < size; ++i)
+        if (symbolsNotOperators[i] != symbolsNotOperators[i + 1])
             result += symbolsNotOperators[i];
 
     return result;
@@ -120,13 +121,18 @@ public:
             }
         }
 
-        //TODO throw buffer.size != 1
+        if (buffer.size() != 1)
+            throw std::invalid_argument("invalid expression");
 
         return buffer[0];
     }
 
     size_t getCountVariables() {
         return functionVariables.size();
+    }
+
+    std::string getFunctionExpression() {
+        return expression;
     }
 };
 

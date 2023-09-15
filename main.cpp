@@ -2,38 +2,46 @@
 
 #include "classes/Function/Function.h"
 
+OperatorFunction<int> plus{
+        2, 1, "+",
+        [](std::vector<int> operands) {
+            return operands[0] + operands[1];
+        }
+};
+OperatorFunction<int> minus{
+        1, 3, "-",
+        [](std::vector<int> operands) {
+            return -operands[0];
+        }
+};
+OperatorFunction<int> multiply{
+        2, 2, "*",
+        [](std::vector<int> operands) {
+            return operands[0] * operands[1];
+        }
+};
+OperatorFunction<int> F{
+        3, 4, "F",
+        [](std::vector<int> operands) {
+            return operands[0] * operands[1] - operands[2];
+        }
+};
+
+SetOperator setOperator{std::vector{plus, minus, multiply, F}};
+
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-    OperatorFunction<int> plus{
-            2, 1, "+",
-            [](std::vector<int> operands) {
-                return operands[0] + operands[1];
-            }
-    };
-    OperatorFunction<int> minus{
-            2, 1, "-",
-            [](std::vector<int> operands) {
-                return operands[0] - operands[1];
-            }
-    };
-    OperatorFunction<int> multiply{
-            2, 2, "*",
-            [](std::vector<int> operands) {
-                return operands[0] * operands[1];
-            }
-    };
-
-    std::vector _setOperator{plus, minus, multiply};
-    SetOperator setOperator{_setOperator};
-
-    Function<int> function{"A*((A+A)*B)", setOperator};
+    Function<int> function{"-F(A+B,B+-C,C)", setOperator};
+    std::cout << function.getFunctionExpression() << std::endl;
 
     int A(2);
     int B(3);
+    int C(4);
     SetVariable<int> setVariable{std::map<std::string, int>{
             {"A", A},
-            {"B", B}
+            {"B", B},
+            {"C", C},
     }};
 
     int result = function.call(setVariable);
