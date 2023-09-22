@@ -4,7 +4,7 @@ SetOperator<bool> boolAlg() {
     OperatorFunction<bool> minus{
             1, 5, "-",
             [](std::vector<bool> operands){
-                return bool(operands[0]);
+                return !operands[0];
             }
     };
     OperatorFunction<bool> conjunction{
@@ -32,7 +32,7 @@ SetOperator<bool> boolAlg() {
             }
     };
 
-    SetOperator result{std::vector{minus}};
+    SetOperator result{std::vector{minus, conjunction, disjunction, implication, equivalence}};
 
     return result;
 }

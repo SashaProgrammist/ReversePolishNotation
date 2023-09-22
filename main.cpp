@@ -22,7 +22,7 @@ void example() {
             }
     };
     OperatorFunction<int> F{
-            3, 4, "F",
+            3, 4, "!",
             [](std::vector<int> operands) {
                 return operands[0] * operands[1] - operands[2];
             }
@@ -30,7 +30,7 @@ void example() {
 
     SetOperator setOperator{std::vector{plus, minus, multiply, F}};
 
-    Function<int> function{"-F(A+B,B+-C,C*-A)", setOperator};
+    Function<int> function{"-!(A+B,B+-C,C*-A)", setOperator};
     std::cout << function.getFunctionExpression() << std::endl;
 
     int A(2);
@@ -50,7 +50,11 @@ void example() {
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-    example();
+    auto ALG = boolAlg();
+
+    Function<bool> function{"X&Y", ALG};
+
+    std::cout << function.functionVariables;
 
     return 0;
 }
