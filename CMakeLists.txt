@@ -17,8 +17,12 @@ add_library(OperatorFunction
 add_library(SetOperators
         SetOperators/SetOperators.h SetOperators/SetOperators.cpp)
 
+add_library(GeneratorFormula
+        GeneratorFormula/GeneratorFormula.h GeneratorFormula/GeneratorFormula.cpp)
+
 target_link_libraries(ReversePolishNotation
         function
         Variable
         OperatorFunction
-        SetOperators)
+        SetOperators
+        GeneratorFormula)

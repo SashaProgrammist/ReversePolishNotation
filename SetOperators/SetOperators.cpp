@@ -2,7 +2,7 @@
 
 SetOperator<bool> boolAlg() {
     OperatorFunction<bool> minus{
-            1, 5, "-",
+            1, 5, "!",
             [](std::vector<bool> operands){
                 return !operands[0];
             }

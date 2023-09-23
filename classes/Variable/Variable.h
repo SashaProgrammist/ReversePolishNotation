@@ -20,6 +20,10 @@ public:
             nameVariables += variable.first;
     }
 
+    [[nodiscard]] std::string getNameVariables() const {
+        return nameVariables;
+    }
+
     bool isEqualVariables(const std::string &functionVariables) {
         return any_of(
                 functionVariables.begin(),

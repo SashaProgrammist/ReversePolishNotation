@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "SetOperators/SetOperators.h"
+#include "GeneratorFormula/GeneratorFormula.h"
 
 void example() {
     OperatorFunction<int> plus{
@@ -52,9 +53,7 @@ int main() {
 
     auto ALG = boolAlg();
 
-    Function<bool> function{"X&Y", ALG};
-
-    std::cout << function.functionVariables;
+    std::cout << generatorFormula<bool>(ALG, "ABS", 5);
 
     return 0;
 }

@@ -45,10 +45,18 @@ class SetOperator {
 private:
     std::map<std::string, OperatorFunction<T>> set;
 
+    std::string symbolsOperators{};
+
 public:
     explicit SetOperator(std::vector<OperatorFunction<T>> operators) {
-        for (auto _operator: operators)
+        for (auto _operator: operators) {
             set[_operator.getSymbol()] = _operator;
+            symbolsOperators += _operator.getSymbol();
+        }
+    }
+
+    [[nodiscard]] std::string getSymbolsOperators() const {
+        return symbolsOperators;
     }
 
     bool isIn(std::string symbolOperator) {
