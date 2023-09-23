@@ -15,6 +15,27 @@ while (!buffer.empty() && buffer.end()[-1] != '(') {        \
 if (buffer.empty())                                         \
     throw std::invalid_argument("missing opening bracket");
 
+#define ALGORITHM_OF_CALL(pushVariable, pushResult, T)             \
+for (const auto &symbol: expression) {                             \
+    if (operators.isIn(symbol)){                                   \
+        auto &currentOperator =                                    \
+                operators.getOperator(symbol);                     \
+        size_t countOperands = currentOperator.getCountOperands(); \
+                                                                   \
+        std::vector<T> currentOperands;                            \
+        for (size_t i = countOperands; i >= 1; --i) {              \
+            auto current = buffer.end()[-i];                       \
+            currentOperands.push_back(current);                    \
+        }                                                          \
+                                                                   \
+        for (int i = 0; i < countOperands; ++i)                    \
+            buffer.pop_back();                                     \
+                                                                   \
+        pushResult;                                                \
+    } else                                                         \
+        pushVariable;                                              \
+}
+
 template<class T>
 std::string getExpression(std::string &expression, SetOperator<T> &operators) {
     std::string result, buffer;
@@ -36,13 +57,13 @@ std::string getExpression(std::string &expression, SetOperator<T> &operators) {
         } else
             switch (symbol) {
                 case ',':
-                    FREE_BUFFER_BEFORE_BRACKET
+                FREE_BUFFER_BEFORE_BRACKET
                     break;
                 case '(':
                     buffer += symbol;
                     break;
                 case ')':
-                    FREE_BUFFER_BEFORE_BRACKET
+                FREE_BUFFER_BEFORE_BRACKET
 
                     buffer.pop_back();
                     break;
@@ -85,9 +106,9 @@ private:
 
     SetOperator<T> &operators;
 
-public:
     std::string functionVariables;
 
+public:
     Function(std::string expression, SetOperator<T> &operators) :
             operators(operators) {
         this->expression = getExpression(expression, operators);
@@ -100,26 +121,10 @@ public:
 
         std::vector<T> buffer;
 
-        for (const auto &symbol: expression) {
-            if (variables.isIn(symbol))
-                buffer.push_back(variables.getVariable(symbol));
-            else {
-                auto &currentOperator =
-                        operators.getOperator(symbol);
-                size_t countOperands = currentOperator.getCountOperands();
-
-                std::vector<T> currentOperands;
-                for (size_t i = countOperands; i >= 1; --i) {
-                    auto current = buffer.end()[-i];
-                    currentOperands.push_back(current);
-                }
-
-                for (int i = 0; i < countOperands; ++i)
-                    buffer.pop_back();
-
-                buffer.push_back(currentOperator.callOperand(currentOperands));
-            }
-        }
+        ALGORITHM_OF_CALL(
+                buffer.push_back(variables.getVariable(symbol)),
+                buffer.push_back(currentOperator.callOperand(currentOperands)),
+                T)
 
         if (buffer.size() != 1)
             throw std::invalid_argument("invalid expression");
@@ -133,6 +138,24 @@ public:
 
     std::string getFunctionExpression() {
         return expression;
+    }
+
+    std::string getFunctionVariables() {
+        return functionVariables;
+    }
+
+    std::string getReversExpression() {
+        std::vector<std::string> buffer;
+
+        ALGORITHM_OF_CALL(
+                buffer.push_back(std::string{symbol}),
+                buffer.push_back(operators.getRevers(currentOperands, symbol)),
+                std::string)
+
+        if (buffer.size() != 1)
+            throw std::invalid_argument("invalid expression");
+
+        return buffer[0];
     }
 };
 

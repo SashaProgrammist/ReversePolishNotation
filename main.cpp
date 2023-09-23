@@ -53,7 +53,13 @@ int main() {
 
     auto ALG = boolAlg();
 
-    std::cout << generatorFormula<bool>(ALG, "ABS", 5);
+    auto formula = generatorFormula<bool>(ALG, "B", 5);
+
+    std::cout << formula << std::endl;
+
+    auto function = Function<bool>(formula, ALG);
+
+    std::cout << function.getReversExpression() << std::endl;
 
     return 0;
 }
