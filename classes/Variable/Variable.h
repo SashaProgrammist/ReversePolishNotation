@@ -25,11 +25,15 @@ public:
     }
 
     bool isEqualVariables(const std::string &functionVariables) {
+        if (functionVariables == nameVariables)
+            return true;
+
         return any_of(
                 functionVariables.begin(),
                 functionVariables.end(),
                 [this](auto name) {
-                    return nameVariables.find(name) != std::string::npos;
+                    return nameVariables.find(name) !=
+                    std::string::npos;
                 });
     }
 

@@ -22,6 +22,9 @@ for (const auto &symbol: expression) {                             \
                 operators.getOperator(symbol);                     \
         size_t countOperands = currentOperator.getCountOperands(); \
                                                                    \
+        if (countOperands > buffer.size())                         \
+            throw std::invalid_argument("invalid expression");     \
+                                                                   \
         std::vector<T> currentOperands;                            \
         for (size_t i = countOperands; i >= 1; --i) {              \
             auto current = buffer.end()[-i];                       \
@@ -37,17 +40,20 @@ for (const auto &symbol: expression) {                             \
 }
 
 template<class T>
-std::string getExpression(std::string &expression, SetOperator<T> &operators) {
+std::string getExpression(std::string &expression,
+                          SetOperator<T> &operators) {
     std::string result, buffer;
 
     for (auto symbol: expression) {
         if (operators.isIn(symbol)) {
-            auto &currentOperator = operators.getOperator(symbol);
+            auto &currentOperator =
+                    operators.getOperator(symbol);
 
             //TODO postfix prefix Function
 
             while (!buffer.empty() && (buffer.end()[-1]) != '(' &&
-                   operators.getOperator(buffer.end()[-1]).getPriority() >=
+                   operators.getOperator(buffer.end()[-1]).
+                           getPriority() >=
                    currentOperator.getPriority()) {
                 result += buffer.end()[-1];
                 buffer.pop_back();
@@ -74,26 +80,34 @@ std::string getExpression(std::string &expression, SetOperator<T> &operators) {
     }
 
     while (!buffer.empty()) {
-        result += buffer.end()[-1];
+        auto symbol = buffer.end()[-1];
         buffer.pop_back();
+
+        if (symbol == '(')
+            throw std::invalid_argument("missing closing bracket");
+
+        result += symbol;
     }
 
     return result;
 }
 
 template<class T>
-std::string getName(std::string &expression, SetOperator<T> &operators) {
+std::string getName(std::string &expression,
+                    SetOperator<T> &operators) {
     std::string symbolsNotOperators;
     for (auto &symbol: expression)
         if (!operators.isIn(symbol))
             symbolsNotOperators += symbol;
 
-    std::sort(symbolsNotOperators.begin(), symbolsNotOperators.end());
+    std::sort(symbolsNotOperators.begin(),
+              symbolsNotOperators.end());
     size_t size = symbolsNotOperators.size();
 
     std::string result;
     for (int i = 0; i < size; ++i)
-        if (symbolsNotOperators[i] != symbolsNotOperators[i + 1])
+        if (symbolsNotOperators[i] !=
+            symbolsNotOperators[i + 1])
             result += symbolsNotOperators[i];
 
     return result;
@@ -112,18 +126,31 @@ public:
     Function(std::string expression, SetOperator<T> &operators) :
             operators(operators) {
         this->expression = getExpression(expression, operators);
-        this->functionVariables = getName(this->expression, operators);
+        this->functionVariables = getName(this->expression,
+                                          operators);
+
+        int counter{};
+        for (auto symbol: this->expression)
+            if (operators.isIn(symbol))
+                counter += operators.getOperator(symbol).getCountOperands() - 1;
+            else
+                counter -= 1;
+
+        if (counter != -1)
+            throw std::invalid_argument("invalid expression");
     }
 
     T call(SetVariable<T> variables) {
         if (!variables.isEqualVariables(functionVariables))
-            throw std::invalid_argument("functionVariables != nameVariables");
+            throw std::invalid_argument(
+                    "functionVariables != nameVariables");
 
         std::vector<T> buffer;
 
         ALGORITHM_OF_CALL(
                 buffer.push_back(variables.getVariable(symbol)),
-                buffer.push_back(currentOperator.callOperand(currentOperands)),
+                buffer.push_back(currentOperator.
+                callOperand(currentOperands)),
                 T)
 
         if (buffer.size() != 1)
@@ -149,7 +176,8 @@ public:
 
         ALGORITHM_OF_CALL(
                 buffer.push_back(std::string{symbol}),
-                buffer.push_back(operators.getRevers(currentOperands, symbol)),
+                buffer.push_back(operators.getRevers(currentOperands,
+                                                     symbol)),
                 std::string)
 
         if (buffer.size() != 1)

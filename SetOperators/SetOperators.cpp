@@ -1,6 +1,18 @@
 #include "SetOperators.h"
 
 SetOperator<bool> boolAlg() {
+    OperatorFunction<bool> zero{
+            0, 6, "0",
+            [](std::vector<bool> operands){
+                return false;
+            }
+    };
+    OperatorFunction<bool> one{
+            0, 6, "1",
+            [](std::vector<bool> operands){
+                return true;
+            }
+    };
     OperatorFunction<bool> minus{
             1, 5, "!",
             [](std::vector<bool> operands){
@@ -32,7 +44,8 @@ SetOperator<bool> boolAlg() {
             }
     };
 
-    SetOperator result{std::vector{minus, conjunction, disjunction, implication, equivalence}};
+    SetOperator result{std::vector{zero, one, minus, conjunction,
+                                   disjunction, implication, equivalence}};
 
     return result;
 }

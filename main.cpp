@@ -3,7 +3,7 @@
 #include "SetOperators/SetOperators.h"
 #include "GeneratorFormula/GeneratorFormula.h"
 
-void example() {
+void example1() {
     OperatorFunction<int> plus{
             2, 1, "+",
             [](std::vector<int> operands) {
@@ -48,18 +48,39 @@ void example() {
     std::cout << result << std::endl;
 }
 
-int main() {
-    std::cout << "Hello, World!" << std::endl;
-
+void example2() {
     auto ALG = boolAlg();
 
-    auto formula = generatorFormula<bool>(ALG, "B", 5);
+    auto formula = generatorFormula<bool>(ALG, "XYZ", 5);
 
     std::cout << formula << std::endl;
 
     auto function = Function<bool>(formula, ALG);
 
     std::cout << function.getReversExpression() << std::endl;
+
+    bool X(true);
+    bool Y(false);
+    bool Z(true);
+    SetVariable<bool> setVariable{std::map<std::string, bool>{
+            {"X", X},
+            {"Y", Y},
+            {"Z", Z},
+    }};
+
+    std::cout << function.call(setVariable) << std::endl;
+}
+
+int main() {
+    std::cout << "Hello, World!" << std::endl;
+
+    auto boolAlg_ = boolAlg();
+
+    auto function = Function<bool>(">", boolAlg_);
+
+    SetVariable<bool> setVariable{std::map<std::string, bool>{}};
+
+    std::cout << function.call(setVariable) << std::endl;
 
     return 0;
 }

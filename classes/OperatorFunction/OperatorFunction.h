@@ -17,7 +17,9 @@ private:
 public:
     OperatorFunction() = default;
 
-    OperatorFunction(size_t countOperands, size_t priority, std::string symbol,
+    OperatorFunction(size_t countOperands,
+                     size_t priority,
+                     std::string symbol,
                      T (*init)(std::vector<T>)) :
             countOperands(countOperands),
             priority(priority),
@@ -26,7 +28,8 @@ public:
 
     T callOperand(std::vector<T> operands) {
         if (countOperands != operands.size())
-            throw std::invalid_argument("number of operands does not match");
+            throw std::invalid_argument(
+                    "number of operands does not match");
 
         T result = init(operands);
 
@@ -45,7 +48,8 @@ template<class T>
 class SetOperator;
 
 template<class T>
-std::string getExpression(std::string &expression, SetOperator<T> &operators);
+std::string getExpression(std::string &expression,
+                          SetOperator<T> &operators);
 
 template<class T>
 class SetOperator {
@@ -57,7 +61,8 @@ private:
     size_t maxPriority{};
 
 public:
-    explicit SetOperator(std::vector<OperatorFunction<T>> operators) {
+    explicit SetOperator(
+            std::vector<OperatorFunction<T>> operators) {
         for (auto _operator: operators) {
             set[_operator.getSymbol()] = _operator;
             symbolsOperators += _operator.getSymbol();
@@ -79,9 +84,11 @@ public:
         return isIn(std::string{symbolOperator});
     }
 
-    OperatorFunction<T> &getOperator(std::string symbolOperator) {
+    OperatorFunction<T> &getOperator(
+            std::string symbolOperator) {
         if (!isIn(symbolOperator))
-            throw std::invalid_argument(symbolOperator + " not find");
+            throw std::invalid_argument(symbolOperator +
+                                        " not find");
 
         return set[symbolOperator];
     }
@@ -99,16 +106,23 @@ public:
             return maxPriority + 1;
     }
 
-    std::string getRevers(std::vector<std::string> expressions, std::string symbolOperator) {
+    std::string getRevers(std::vector<std::string> expressions,
+                          std::string symbolOperator) {
         OperatorFunction<T> _operator = getOperator(symbolOperator);
 
         if (expressions.size() != _operator.getCountOperands())
-            throw std::invalid_argument("expressions.size() != _operator.getCountOperands()");
+            throw std::invalid_argument(
+                    "expressions.size() != "
+                    "_operator.getCountOperands()");
 
 
         switch (_operator.getCountOperands()) {
+            case 0: {
+                return symbolOperator;
+            }
             case 1: {
-                size_t priorityPastOperator = getPriorityLastOperator(expressions[0]);
+                size_t priorityPastOperator =
+                        getPriorityLastOperator(expressions[0]);
                 if (priorityPastOperator <= _operator.getPriority())
                     return symbolOperator + "(" + expressions[0] + ")";
                 else
@@ -117,16 +131,20 @@ public:
             case 2: {
                 std::string result;
 
-                size_t priorityLeftPastOperator = getPriorityLastOperator(expressions[0]);
+                size_t priorityLeftPastOperator =
+                        getPriorityLastOperator(expressions[0]);
 
                 if (priorityLeftPastOperator < _operator.getPriority())
-                    result += "(" + expressions[0] + ")" + symbolOperator;
+                    result += "(" + expressions[0] + ")" +
+                              symbolOperator;
                 else
                     result += expressions[0] + symbolOperator;
 
-                size_t PriorityRightPastOperator = getPriorityLastOperator(expressions[1]);
+                size_t PriorityRightPastOperator =
+                        getPriorityLastOperator(expressions[1]);
 
-                if (PriorityRightPastOperator <= _operator.getPriority())
+                if (PriorityRightPastOperator <=
+                    _operator.getPriority())
                     result += "(" + expressions[1] + ")";
                 else
                     result += expressions[1];
@@ -145,7 +163,8 @@ public:
         }
     }
 
-    std::string getRevers(std::vector<std::string> expressions, char symbolOperator) {
+    std::string getRevers(std::vector<std::string> expressions,
+                          char symbolOperator) {
         return getRevers(expressions, std::string{symbolOperator});
     }
 };
