@@ -71,16 +71,68 @@ void example2() {
     std::cout << function.call(setVariable) << std::endl;
 }
 
+#define NUMBER(name, n)\
+OperatorFunction<int> name{\
+        0, 6, std::string{n + '0'},\
+        [](std::vector<int> operands){\
+            return n;\
+        }\
+};
+
+void example3() {
+    NUMBER(number0, 0)
+    NUMBER(number1, 1)
+    NUMBER(number2, 2)
+    NUMBER(number3, 3)
+    NUMBER(number4, 4)
+    NUMBER(number5, 5)
+    NUMBER(number6, 6)
+    NUMBER(number7, 7)
+    NUMBER(number8, 8)
+    NUMBER(number9, 9)
+
+    OperatorFunction<int> a{
+            1, 5, "!",
+            [](std::vector<int> operands) {
+                return 5 - operands[0];
+            }, prefix
+    };
+    OperatorFunction<int> b{
+            1, 5, "^",
+            [](std::vector<int> operands) {
+                return operands[0] * operands[0];
+            }, postfix
+    };
+
+    SetOperator setOperator{std::vector{
+            number0, number1, number2, number3, number4, number5, number6, number7, number8, number9,
+            a, b,
+    }};
+
+
+    std::string formula =
+            generatorFormula(setOperator,
+                             "0123456789",
+                             5);
+
+    Function<int> function(formula, setOperator);
+
+    std::cout << formula
+              << " = "
+              << function.getReversExpression()
+              << " = "
+              << function.call(SetVariable<int>(
+                      std::map<std::string, int>{}))
+              << std::endl;
+}
+
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-    auto boolAlg_ = boolAlg();
+//    example1();
 
-    auto function = Function<bool>(">", boolAlg_);
-
-    SetVariable<bool> setVariable{std::map<std::string, bool>{}};
-
-    std::cout << function.call(setVariable) << std::endl;
+    for (int i = 0; i < 10; ++i)
+        example3();
 
     return 0;
 }

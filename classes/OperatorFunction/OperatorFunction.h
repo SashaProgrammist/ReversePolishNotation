@@ -5,6 +5,13 @@
 #include <stdexcept>
 #include <map>
 
+typedef enum NationType {
+    prefix,
+    infix,
+    postfix,
+    uncertain
+};
+
 template<class T>
 class OperatorFunction {
 private:
@@ -14,19 +21,37 @@ private:
 
     T (*init)(std::vector<T>);
 
+    NationType nationType;
+
 public:
     OperatorFunction() = default;
 
     OperatorFunction(size_t countOperands,
                      size_t priority,
                      std::string symbol,
-                     T (*init)(std::vector<T>)) :
+                     T (*init)(std::vector<T>), NationType type = uncertain) :
             countOperands(countOperands),
             priority(priority),
             symbol(std::move(symbol)),
-            init(init) {}
+            init(init), nationType(type) {
+        if (type == uncertain)
+            switch (countOperands) {
+                case 0:
+                    nationType = postfix;
+                    break;
+                case 1:
+                    nationType = prefix;
+                    break;
+                case 2:
+                    nationType = infix;
+                    break;
+                default:
+                    nationType = prefix;
+                    break;
+            }
+    }
 
-    T callOperand(std::vector<T> operands) {
+    [[nodiscard]] T callOperand(std::vector<T> operands) const {
         if (countOperands != operands.size())
             throw std::invalid_argument(
                     "number of operands does not match");
@@ -37,11 +62,19 @@ public:
     }
 
 
-    size_t getCountOperands() { return countOperands; }
+    [[nodiscard]] size_t getCountOperands() const { return countOperands; }
 
-    size_t getPriority() { return priority; }
+    [[nodiscard]] size_t getPriority() const { return priority; }
 
-    std::string getSymbol() { return symbol; }
+    [[nodiscard]] std::string getSymbol() const { return symbol; }
+
+    [[nodiscard]] bool isPostfix() const { return nationType == postfix; }
+
+    [[nodiscard]] bool isInfix() const { return nationType == infix; }
+
+    [[nodiscard]] bool isPrefix() const { return nationType == prefix; }
+
+    [[nodiscard]] NationType getNationType() const { return nationType; }
 };
 
 template<class T>
@@ -121,12 +154,22 @@ public:
                 return symbolOperator;
             }
             case 1: {
-                size_t priorityPastOperator =
-                        getPriorityLastOperator(expressions[0]);
-                if (priorityPastOperator <= _operator.getPriority())
-                    return symbolOperator + "(" + expressions[0] + ")";
-                else
+                std::string expression = getExpression(expressions[0], *this);
+                if (isIn(expression.end()[-1])) {
+                    if (_operator.isPrefix() && getOperator(expression.end()[-1]).isPrefix())
+                        return symbolOperator + expressions[0];
+                    if (_operator.isPostfix())
+                        return expressions[0] + symbolOperator;
+
+                    size_t priorityPastOperator = getOperator(expression.end()[-1]).getPriority();
+                    if (priorityPastOperator <= _operator.getPriority())
+                        return symbolOperator + "(" + expressions[0] + ")";
+                    else
+                        return symbolOperator + expressions[0];
+                } else if (_operator.isPrefix())
                     return symbolOperator + expressions[0];
+                else
+                    return expressions[0] + symbolOperator;
             }
             case 2: {
                 std::string result;

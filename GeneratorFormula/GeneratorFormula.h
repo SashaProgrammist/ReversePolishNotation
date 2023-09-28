@@ -27,27 +27,50 @@ std::string generatorFormula(SetOperator<T> setOperator,
 
         if (!countOperands)
             return symbol;
-        else if (countOperands == 1)
+        else if (countOperands == 1) {
+            auto _operator = setOperator.getOperator(symbol);
+
+            if (_operator.isPostfix())
+                return "(" + generatorFormula(
+                        setOperator, variables, count - 1) + symbol + ")";
+
             return "(" + symbol + generatorFormula(
                     setOperator, variables, count - 1) + ")";
-        else if (countOperands == 2)
-            return "(" +
-                   generatorFormula(setOperator, variables, count - 1) +
-                   symbol +
-                   generatorFormula(setOperator, variables, count - 1) +
-                   ")";
+
+        } else if (countOperands == 2) {
+            auto _operator = setOperator.getOperator(symbol);
+            switch (_operator.getNationType()) {
+                case prefix:
+                    return "(" +
+                           symbol + +"(" +
+                           generatorFormula(setOperator, variables, count - 1) + "," +
+                           generatorFormula(setOperator, variables, count - 1) +
+                           "))";
+                case infix:
+                    return "(" +
+                           generatorFormula(setOperator, variables, count - 1) +
+                           symbol +
+                           generatorFormula(setOperator, variables, count - 1) +
+                           ")";
+                case postfix: {
+                    return "(" +
+                           generatorFormula(setOperator, variables, count - 1) +
+                           generatorFormula(setOperator, variables, count - 1) +
+                           symbol +
+                           ")";
+                }
+            }
+        }
+
 
         std::string result = "(" + symbol + "(";
 
-        for (size_t i = 1; i < countOperands; ++i)
+        for (size_t i = 0; i < countOperands; ++i)
             result += generatorFormula(setOperator,
                                        variables,
                                        count - 1) +
                       ",";
-        result += generatorFormula(setOperator,
-                                   variables,
-                                   count - 1) +
-                  "))";
+        result += "))";
 
         return result;
 

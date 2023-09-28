@@ -39,6 +39,7 @@ for (const auto &symbol: expression) {                             \
         pushVariable;                                              \
 }
 
+
 template<class T>
 std::string getExpression(std::string &expression,
                           SetOperator<T> &operators) {
@@ -51,15 +52,20 @@ std::string getExpression(std::string &expression,
 
             //TODO postfix prefix Function
 
-            while (!buffer.empty() && (buffer.end()[-1]) != '(' &&
-                   operators.getOperator(buffer.end()[-1]).
-                           getPriority() >=
-                   currentOperator.getPriority()) {
-                result += buffer.end()[-1];
-                buffer.pop_back();
-            }
+            if (currentOperator.isPostfix())
+                result += symbol;
 
-            buffer += symbol;
+            if (!(currentOperator.isPostfix() || currentOperator.isPrefix()))
+                while (!buffer.empty() && (buffer.end()[-1]) != '(' &&
+                       operators.getOperator(buffer.end()[-1]).
+                               getPriority() >=
+                       currentOperator.getPriority()) {
+                    result += buffer.end()[-1];
+                    buffer.pop_back();
+                }
+
+            if (!currentOperator.isPostfix())
+                buffer += symbol;
         } else
             switch (symbol) {
                 case ',':
@@ -68,13 +74,25 @@ std::string getExpression(std::string &expression,
                 case '(':
                     buffer += symbol;
                     break;
-                case ')':
-                FREE_BUFFER_BEFORE_BRACKET
+                case ')': {
+                    FREE_BUFFER_BEFORE_BRACKET
 
                     buffer.pop_back();
+
+                    while (!buffer.empty() && buffer.end()[-1] != '(' &&
+                           operators.getOperator(buffer.end()[-1]).isPrefix()) {
+                        result += buffer.end()[-1];
+                        buffer.pop_back();
+                    }
+                }
                     break;
                 default:
                     result += symbol;
+                    while (!buffer.empty() && buffer.end()[-1] != '(' &&
+                           operators.getOperator(buffer.end()[-1]).isPrefix()) {
+                        result += buffer.end()[-1];
+                        buffer.pop_back();
+                    }
                     break;
             }
     }
@@ -150,7 +168,7 @@ public:
         ALGORITHM_OF_CALL(
                 buffer.push_back(variables.getVariable(symbol)),
                 buffer.push_back(currentOperator.
-                callOperand(currentOperands)),
+                        callOperand(currentOperands)),
                 T)
 
         if (buffer.size() != 1)
