@@ -5,12 +5,17 @@
 #include <stdexcept>
 #include <map>
 
-typedef enum NationType {
+#define GET_REVERS_GET_PRIORITY(name, n)\
+if (isIn(expressions[n].second.end()[-1]))                               \
+size_t name = getOperator(expressions[n].second.end()[-1]).getPriority(); \
+size_t name = maxPriority + 1;
+
+typedef enum {
     prefix,
     infix,
     postfix,
     uncertain
-};
+} NationType;
 
 template<class T>
 class OperatorFunction {
@@ -21,7 +26,7 @@ private:
 
     T (*init)(std::vector<T>);
 
-    NationType nationType;
+    NationType nationType = uncertain;
 
 public:
     OperatorFunction() = default;
@@ -74,6 +79,8 @@ public:
 
     [[nodiscard]] bool isPrefix() const { return nationType == prefix; }
 
+    [[nodiscard]] bool isNolar() const { return countOperands == 0; }
+
     [[nodiscard]] NationType getNationType() const { return nationType; }
 };
 
@@ -93,15 +100,23 @@ private:
 
     size_t maxPriority{};
 
+    size_t countNolars{};
+
+    size_t countOperators{};
+
 public:
     explicit SetOperator(
-            std::vector<OperatorFunction<T>> operators) {
+            std::vector<OperatorFunction<T>> operators) :
+            countOperators(operators.size()) {
         for (auto _operator: operators) {
             set[_operator.getSymbol()] = _operator;
             symbolsOperators += _operator.getSymbol();
 
             if (maxPriority < _operator.getPriority())
                 maxPriority = _operator.getPriority();
+
+            if (_operator.isNolar())
+                countNolars++;
         }
     }
 
@@ -139,8 +154,9 @@ public:
             return maxPriority + 1;
     }
 
-    std::string getRevers(std::vector<std::string> expressions,
-                          std::string symbolOperator) {
+    std::pair<std::string, std::string>
+    getRevers(std::vector<std::pair<std::string, std::string>> expressions,
+              std::string symbolOperator) {
         OperatorFunction<T> _operator = getOperator(symbolOperator);
 
         if (expressions.size() != _operator.getCountOperands())
@@ -151,64 +167,126 @@ public:
 
         switch (_operator.getCountOperands()) {
             case 0: {
-                return symbolOperator;
+                return {symbolOperator, symbolOperator};
             }
             case 1: {
-                std::string expression = getExpression(expressions[0], *this);
+                std::string expression = expressions[0].second;
                 if (isIn(expression.end()[-1])) {
-                    if (_operator.isPrefix() && getOperator(expression.end()[-1]).isPrefix())
-                        return symbolOperator + expressions[0];
-                    if (_operator.isPostfix())
-                        return expressions[0] + symbolOperator;
+                    if (_operator.isPrefix()) {
+                        OperatorFunction<T> pastOperator = getOperator(expression.end()[-1]);
+                        if (pastOperator.isPrefix())
+                            return {symbolOperator + expressions[0].first,
+                                    expressions[0].second + symbolOperator};
+                        else
+                            return {symbolOperator + "(" + expressions[0].first + ")",
+                                    expressions[0].second + symbolOperator};
+                    } else if (_operator.isPostfix())
+                        return {expressions[0].first + symbolOperator,
+                                expressions[0].second + symbolOperator};
 
                     size_t priorityPastOperator = getOperator(expression.end()[-1]).getPriority();
                     if (priorityPastOperator <= _operator.getPriority())
-                        return symbolOperator + "(" + expressions[0] + ")";
+                        return {symbolOperator + "(" + expressions[0].first + ")",
+                                expressions[0].second + symbolOperator};
                     else
-                        return symbolOperator + expressions[0];
+                        return {symbolOperator + expressions[0].first,
+                                expressions[0].second + symbolOperator};
                 } else if (_operator.isPrefix())
-                    return symbolOperator + expressions[0];
+                    return {symbolOperator + expressions[0].first,
+                            expressions[0].second + symbolOperator};
                 else
-                    return expressions[0] + symbolOperator;
+                    return {expressions[0].first + symbolOperator,
+                            expressions[0].second + symbolOperator};
             }
             case 2: {
-                std::string result;
+                if (_operator.isPrefix())
+                    return {symbolOperator + "(" + expressions[0].first + "," + expressions[1].first + ")",
+                            expressions[0].second + expressions[1].second + symbolOperator};
+                else if (_operator.isPostfix())
+                    return {"(" + expressions[0].first + "," + expressions[1].first + ")" + symbolOperator,
+                            expressions[0].second + expressions[1].second + symbolOperator};
 
-                size_t priorityLeftPastOperator =
-                        getPriorityLastOperator(expressions[0]);
+                std::string result = "(";
 
-                if (priorityLeftPastOperator < _operator.getPriority())
-                    result += "(" + expressions[0] + ")" +
-                              symbolOperator;
-                else
-                    result += expressions[0] + symbolOperator;
+                if (isIn(expressions[0].second.end()[-1])) {
+                    OperatorFunction<T> leftPastOperator = getOperator(expressions[0].second.end()[-1]);
+                    if (!leftPastOperator.isInfix()) {
+                        switch (leftPastOperator.getNationType()) {
+                            case prefix:
+                                result += expressions[0].first + symbolOperator;
+                                break;
+                            case postfix:
+                                result += "(" + expressions[0].first + ")" + symbolOperator;
+                        }
+                    } else {
+                        size_t priorityLeftPastOperator = leftPastOperator.getPriority();
+                        if (priorityLeftPastOperator < _operator.getPriority())
+                            result += "(" + expressions[0].first + ")" +
+                                      symbolOperator;
+                        else
+                            result += expressions[0].first + symbolOperator;
+                    }
+                } else
+                    result += expressions[0].first + symbolOperator;
 
-                size_t PriorityRightPastOperator =
-                        getPriorityLastOperator(expressions[1]);
 
-                if (PriorityRightPastOperator <=
-                    _operator.getPriority())
-                    result += "(" + expressions[1] + ")";
-                else
-                    result += expressions[1];
+                if (isIn(expressions[1].second.end()[-1])) {
+                    auto leftPastOperator = getOperator(expressions[1].second.end()[-1]);
+                    if (!leftPastOperator.isInfix()) {
+                        switch (leftPastOperator.getNationType()) {
+                            case prefix:
+                                result += "(" + expressions[1].first + ")";
+                                break;
+                            case postfix:
+                                result += "(" + expressions[1].first + ")";
+                        }
+                    } else {
+                        size_t PriorityRightPastOperator = leftPastOperator.getPriority();
+                        if (PriorityRightPastOperator <=
+                            _operator.getPriority())
+                            result += "(" + expressions[1].first + ")";
+                        else
+                            result += expressions[1].first;
+                    }
+                } else
+                    result += expressions[1].first;
 
-                return result;
+                result += ")";
+
+
+                return {result,
+                        expressions[0].second + expressions[1].second + symbolOperator};
             }
             default: {
-                std::string result = symbolOperator + "(";
+                std::string resultFirst = symbolOperator + "(";
+                std::string resultSecond;
 
                 for (int i = 1; i < _operator.getCountOperands(); ++i)
-                    result += expressions[i - 1] + ",";
-                result += expressions.end()[-1] + ")";
+                    resultFirst += expressions[i - 1].first + ",";
+                resultFirst += expressions.end()[-1].first + ")";
 
-                return result;
+                for (int i = 0; i < _operator.getCountOperands(); ++i) {
+                    resultSecond += expressions[i].second;
+                }
+                resultSecond += symbolOperator;
+
+                return {resultFirst, resultSecond};
             }
         }
     }
 
-    std::string getRevers(std::vector<std::string> expressions,
-                          char symbolOperator) {
+    std::pair<std::string, std::string>
+    getRevers(std::vector<std::pair<std::string, std::string>> expressions,
+              char symbolOperator) {
         return getRevers(expressions, std::string{symbolOperator});
+    }
+
+    size_t getCountNolares() {
+        return countNolars;
+    }
+
+    size_t getCountNonNolares() {
+        return countOperators - countNolars;
     }
 };
 

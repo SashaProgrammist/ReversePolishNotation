@@ -8,7 +8,7 @@
 size_t getRandom();
 
 template<typename T>
-std::string generatorFormula(SetOperator<T> setOperator,
+std::string generatorFormula(SetOperator<T> &setOperator,
                              std::string variables, size_t count) {
     if (count) {
         auto symbols = setOperator.getSymbolsOperators();
@@ -19,10 +19,17 @@ std::string generatorFormula(SetOperator<T> setOperator,
                 setOperator.getOperator(symbol).getCountOperands();
 
         if (!countOperands) {
-            symbol = std::string{symbols[getRandom() %
-                                         symbols.size()]};
-            countOperands =
-                    setOperator.getOperator(symbol).getCountOperands();
+            size_t countNolares = setOperator.getCountNolares();
+            size_t countNonNolares = setOperator.getCountNonNolares();
+            size_t sum = 0;
+
+            while (!countOperands && sum < countNolares) {
+                symbol = std::string{symbols[getRandom() %
+                                             symbols.size()]};
+                countOperands =
+                        setOperator.getOperator(symbol).getCountOperands();
+                sum += countNonNolares;
+            }
         }
 
         if (!countOperands)
@@ -46,7 +53,7 @@ std::string generatorFormula(SetOperator<T> setOperator,
                            generatorFormula(setOperator, variables, count - 1) + "," +
                            generatorFormula(setOperator, variables, count - 1) +
                            "))";
-                case infix:
+                default: // infix
                     return "(" +
                            generatorFormula(setOperator, variables, count - 1) +
                            symbol +
@@ -54,10 +61,10 @@ std::string generatorFormula(SetOperator<T> setOperator,
                            ")";
                 case postfix: {
                     return "(" +
+                           generatorFormula(setOperator, variables, count - 1) + "," +
                            generatorFormula(setOperator, variables, count - 1) +
-                           generatorFormula(setOperator, variables, count - 1) +
-                           symbol +
-                           ")";
+                           ")" +
+                           symbol;
                 }
             }
         }

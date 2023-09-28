@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cassert>
 
 #include "SetOperators/SetOperators.h"
 #include "GeneratorFormula/GeneratorFormula.h"
@@ -51,7 +52,7 @@ void example1() {
 void example2() {
     auto ALG = boolAlg();
 
-    auto formula = generatorFormula<bool>(ALG, "XYZ", 5);
+    auto formula = generatorFormula<bool>(ALG, "01", 5);
 
     std::cout << formula << std::endl;
 
@@ -59,14 +60,7 @@ void example2() {
 
     std::cout << function.getReversExpression() << std::endl;
 
-    bool X(true);
-    bool Y(false);
-    bool Z(true);
-    SetVariable<bool> setVariable{std::map<std::string, bool>{
-            {"X", X},
-            {"Y", Y},
-            {"Z", Z},
-    }};
+    SetVariable<bool> setVariable{std::map<std::string, bool>{}};
 
     std::cout << function.call(setVariable) << std::endl;
 }
@@ -74,7 +68,7 @@ void example2() {
 #define NUMBER(name, n)\
 OperatorFunction<int> name{\
         0, 6, std::string{n + '0'},\
-        [](std::vector<int> operands){\
+        []([[maybe_unused]] std::vector<int> operands){\
             return n;\
         }\
 };
@@ -103,36 +97,86 @@ void example3() {
                 return operands[0] * operands[0];
             }, postfix
     };
+    OperatorFunction<int> c{
+            2, 4, "+",
+            [](std::vector<int> operands) {
+                return operands[0] + operands[1];
+            }, prefix
+    };
+    OperatorFunction<int> d{
+            2, 4, "/",
+            [](std::vector<int> operands) {
+                if (operands[1])
+                    return operands[0] / operands[1];
+                return 0;
+            }, postfix
+    };
+    OperatorFunction<int> e{
+            2, 3, "-",
+            [](std::vector<int> operands) {
+                return operands[0] - operands[1];
+            }, infix
+    };
 
     SetOperator setOperator{std::vector{
             number0, number1, number2, number3, number4, number5, number6, number7, number8, number9,
-            a, b,
+            a, b, c, d, e
     }};
 
+    for (int i = 0; i < 100; ++i) {
+        std::string formula =
+                generatorFormula(setOperator,
+                                 "0123456789ABCD",
+                                 40);
 
-    std::string formula =
-            generatorFormula(setOperator,
-                             "0123456789",
-                             5);
+        Function<int> function1(formula, setOperator);
+        Function<int> function2(function1.getReversExpression(), setOperator);
 
-    Function<int> function(formula, setOperator);
+        assert(function1.getFunctionExpression() ==
+               function2.getFunctionExpression());
+    }
 
-    std::cout << formula
-              << " = "
-              << function.getReversExpression()
-              << " = "
-              << function.call(SetVariable<int>(
-                      std::map<std::string, int>{}))
-              << std::endl;
+    for (int i = 0; i < 10; ++i) {
+        std::string formula =
+                generatorFormula(setOperator,
+                                 "0123456789",
+                                 5);
+
+        Function<int> function(formula, setOperator);
+
+        std::cout << formula
+                  << " = "
+                  << function.getReversExpression()
+                  << " = "
+                  << function.call(SetVariable<int>(
+                          std::map<std::string, int>{}))
+                  << std::endl;
+    }
+
+    while (true) {
+        std::string formula;
+        std::cin >> formula;
+
+        try {
+            Function<int> function(formula, setOperator);
+
+            std::cout << formula
+                      << " = "
+                      << function.getReversExpression()
+                      << " = "
+                      << function.call(SetVariable<int>(
+                              std::map<std::string, int>{}))
+                      << std::endl;
+        } catch (std::invalid_argument &e) {
+            std::cout << e.what() << std::endl;
+        }
+    }
 }
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-//    example1();
-
-    for (int i = 0; i < 10; ++i)
-        example3();
+    example2();
 
     return 0;
 }
