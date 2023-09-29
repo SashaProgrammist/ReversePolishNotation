@@ -119,18 +119,32 @@ void example3() {
     };
 
     SetOperator setOperator{std::vector{
-            number0, number1, number2, number3, number4, number5, number6, number7, number8, number9,
+            number0, number1, number2, number3, number4,
+            number5, number6, number7, number8, number9,
             a, b, c, d, e
     }};
 
     for (int i = 0; i < 100; ++i) {
-        std::string formula =
+        std::string formula1 =
                 generatorFormula(setOperator,
                                  "0123456789ABCD",
-                                 40);
+                                 5);
 
-        Function<int> function1(formula, setOperator);
-        Function<int> function2(function1.getReversExpression(), setOperator);
+        Function<int> function1(formula1, setOperator);
+        std::string formula2 = function1.getReversExpression();
+        Function<int> function2(formula2, setOperator);
+
+        if (function1.getFunctionExpression() !=
+            function2.getFunctionExpression())
+            std::cout << formula1
+                      << std::endl
+                      << formula2
+                      << std::endl
+                      << function1.getFunctionExpression()
+                      << std::endl
+                      << function2.getFunctionExpression()
+                      << std::endl;
+
 
         assert(function1.getFunctionExpression() ==
                function2.getFunctionExpression());
@@ -176,7 +190,7 @@ void example3() {
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-    example2();
+    example3();
 
     return 0;
 }

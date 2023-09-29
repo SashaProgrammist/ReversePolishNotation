@@ -172,26 +172,34 @@ public:
             case 1: {
                 std::string expression = expressions[0].second;
                 if (isIn(expression.end()[-1])) {
+                    OperatorFunction<T> pastOperator = getOperator(expression.end()[-1]);
                     if (_operator.isPrefix()) {
-                        OperatorFunction<T> pastOperator = getOperator(expression.end()[-1]);
-                        if (pastOperator.isPrefix())
+                        if (pastOperator.isPrefix() ||
+                            (pastOperator.isPostfix() && pastOperator.isNolar()))
                             return {symbolOperator + expressions[0].first,
                                     expressions[0].second + symbolOperator};
                         else
                             return {symbolOperator + "(" + expressions[0].first + ")",
                                     expressions[0].second + symbolOperator};
                     } else if (_operator.isPostfix())
-                        return {expressions[0].first + symbolOperator,
-                                expressions[0].second + symbolOperator};
+                        switch (pastOperator.getNationType()) {
+                            case postfix:
+                            case prefix:
+                                return {expressions[0].first + symbolOperator,
+                                        expressions[0].second + symbolOperator};
+                            case infix:
+                                return {"(" + expressions[0].first + ")" + symbolOperator,
+                                        expressions[0].second + symbolOperator};
+                        }
 
-                    size_t priorityPastOperator = getOperator(expression.end()[-1]).getPriority();
+                    size_t priorityPastOperator = pastOperator.getPriority();
                     if (priorityPastOperator <= _operator.getPriority())
                         return {symbolOperator + "(" + expressions[0].first + ")",
                                 expressions[0].second + symbolOperator};
                     else
                         return {symbolOperator + expressions[0].first,
                                 expressions[0].second + symbolOperator};
-                } else if (_operator.isPrefix())
+                } else if (_operator.isPrefix() || _operator.isInfix())
                     return {symbolOperator + expressions[0].first,
                             expressions[0].second + symbolOperator};
                 else
@@ -206,16 +214,18 @@ public:
                     return {"(" + expressions[0].first + "," + expressions[1].first + ")" + symbolOperator,
                             expressions[0].second + expressions[1].second + symbolOperator};
 
-                std::string result = "(";
+//                std::string result = "(";
+                std::string result;
 
                 if (isIn(expressions[0].second.end()[-1])) {
                     OperatorFunction<T> leftPastOperator = getOperator(expressions[0].second.end()[-1]);
                     if (!leftPastOperator.isInfix()) {
                         switch (leftPastOperator.getNationType()) {
                             case prefix:
+                            case postfix:
                                 result += expressions[0].first + symbolOperator;
                                 break;
-                            case postfix:
+                            default:
                                 result += "(" + expressions[0].first + ")" + symbolOperator;
                         }
                     } else {
@@ -235,9 +245,10 @@ public:
                     if (!leftPastOperator.isInfix()) {
                         switch (leftPastOperator.getNationType()) {
                             case prefix:
-                                result += "(" + expressions[1].first + ")";
-                                break;
                             case postfix:
+                                result += expressions[1].first;
+                                break;
+                            default:
                                 result += "(" + expressions[1].first + ")";
                         }
                     } else {
@@ -251,7 +262,7 @@ public:
                 } else
                     result += expressions[1].first;
 
-                result += ")";
+//                result += ")";
 
 
                 return {result,

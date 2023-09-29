@@ -9,6 +9,13 @@
 
 #define comma ,
 
+#define FREE_PREFIX_BUFFER                            \
+while (!buffer.empty() && buffer.end()[-1] != '(' &&  \
+operators.getOperator(buffer.end()[-1]).isPrefix()) { \
+result += buffer.end()[-1];                           \
+buffer.pop_back();                                    \
+}
+
 #define FREE_BUFFER_BEFORE_BRACKET                          \
 while (!buffer.empty() && buffer.end()[-1] != '(') {        \
     result += buffer.end()[-1];                             \
@@ -78,8 +85,11 @@ std::string getExpression(std::string &expression,
             // добавляем текущий символ
             if (!currentOperator.isPostfix())
                 buffer += symbol;
-            else
+            else {
                 result += symbol;
+                if (currentOperator.isNolar())
+                    FREE_PREFIX_BUFFER
+            }
         } else
             switch (symbol) {
                 case ',': // этот случай нужен для тернарных и более операторов
@@ -94,20 +104,12 @@ std::string getExpression(std::string &expression,
 
                     buffer.pop_back();
 
-                    while (!buffer.empty() && buffer.end()[-1] != '(' &&
-                           operators.getOperator(buffer.end()[-1]).isPrefix()) {
-                        result += buffer.end()[-1];
-                        buffer.pop_back();
-                    }
+                    FREE_PREFIX_BUFFER
                 }
                     break;
                 default: // это случай когда символ является символом переменной
                     result += symbol;
-                    while (!buffer.empty() && buffer.end()[-1] != '(' &&
-                           operators.getOperator(buffer.end()[-1]).isPrefix()) {
-                        result += buffer.end()[-1];
-                        buffer.pop_back();
-                    }
+                    FREE_PREFIX_BUFFER
                     break;
             }
     }
