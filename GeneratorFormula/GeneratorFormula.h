@@ -46,7 +46,7 @@ std::string generatorFormula(SetOperator<T> &setOperator,
 
         } else if (countOperands == 2) {
             auto _operator = setOperator.getOperator(symbol);
-            switch (_operator.getNationType()) {
+            switch (_operator.getNotationType()) {
                 case prefix:
                     return "(" +
                            symbol + +"(" +
@@ -60,26 +60,61 @@ std::string generatorFormula(SetOperator<T> &setOperator,
                            generatorFormula(setOperator, variables, count - 1) +
                            ")";
                 case postfix: {
-                    return "(" +
+                    return "((" +
                            generatorFormula(setOperator, variables, count - 1) + "," +
                            generatorFormula(setOperator, variables, count - 1) +
                            ")" +
-                           symbol;
+                           symbol + ")";
                 }
             }
         }
 
+        auto _operator = setOperator.getOperator(symbol);
+        switch (_operator.getNotationType()) {
+            case prefix: {
+                std::string result = "(" + symbol + "(";
 
-        std::string result = "(" + symbol + "(";
+                for (size_t i = 0; i < countOperands; ++i)
+                    result += generatorFormula(setOperator,
+                                               variables,
+                                               count - 1) +
+                              ",";
+                result.pop_back();
+                result += "))";
 
-        for (size_t i = 0; i < countOperands; ++i)
-            result += generatorFormula(setOperator,
-                                       variables,
-                                       count - 1) +
-                      ",";
-        result += "))";
+                return result;
+            }
+            case postfix: {
+                std::string result = "((";
 
-        return result;
+                for (size_t i = 0; i < countOperands; ++i)
+                    result += generatorFormula(setOperator,
+                                               variables,
+                                               count - 1) +
+                              ",";
+                result.pop_back();
+                result += ")" + symbol + ")";
+
+                return result;
+            }
+            default: { // infix
+                std::string result = "(" +
+                                     generatorFormula(setOperator,
+                                                      variables,
+                                                      count - 1) +
+                                     symbol;
+                for (size_t i = 1; i < countOperands; ++i)
+                    result += generatorFormula(setOperator,
+                                               variables,
+                                               count - 1) +
+                              ":";
+                result.pop_back();
+                result += ")";
+
+                return result;
+            }
+        }
+
 
     } else
         return std::string{variables[getRandom() % variables.size()]};

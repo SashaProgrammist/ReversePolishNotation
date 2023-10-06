@@ -7,24 +7,58 @@
 #include "../OperatorFunction/OperatorFunction.h"
 #include "../Variable/Variable.h"
 
+// Макрос "comma" определяет
+// запятую для удобства использования
+// в макросах.
 #define comma ,
 
-#define FREE_PREFIX_BUFFER                            \
+// Макрос ADD_FROM_BUFFER_TO_RESULT(currentOperator)
+// используется для добавления операторов
+// из буфера в результат. Он выполняет следующие действия:
+// 1. Проверяет, не пуст ли буфер
+//    ternaryBuffer и соответствует ли текущий оператор
+//    последнему символу в ternaryBuffer.
+// 2. Если соответствие найдено и количество операндов
+//    в ternaryBuffer не равно 1,
+//    выбрасывается исключение std::invalid_argument
+//    с сообщением "ternary dont hef operands".
+// 3. Удаляет последний элемент из ternaryBuffer.
+// 4. Добавляет последний элемент из buffer
+//    в результат и удаляет его из buffer.
+#define ADD_FROM_BUFFER_TO_RESULT        \
+if (!ternaryBuffer.empty() &&            \
+std::string{buffer.end()[-1]} ==         \
+ternaryBuffer.end()[-1].first) {         \
+if (ternaryBuffer.end()[-1].second != 1) \
+throw std::invalid_argument(             \
+"ternary dont hef operands");            \
+ternaryBuffer.pop_back();                \
+}                                        \
+result += buffer.end()[-1];              \
+buffer.pop_back();
+
+
+// Освободить из буфера префиксные
+// операторы до открывающей скобки.
+#define FREE_FROM_BUFFER_PREFIX_OPERATORS             \
 while (!buffer.empty() && buffer.end()[-1] != '(' &&  \
 operators.getOperator(buffer.end()[-1]).isPrefix()) { \
-result += buffer.end()[-1];                           \
-buffer.pop_back();                                    \
+ADD_FROM_BUFFER_TO_RESULT                             \
 }
 
-#define FREE_BUFFER_BEFORE_BRACKET                          \
-while (!buffer.empty() && buffer.end()[-1] != '(') {        \
-    result += buffer.end()[-1];                             \
-    buffer.pop_back();                                      \
-}                                                           \
-if (buffer.empty())                                         \
+// Освободить буфер до открывающей скобки.
+#define FREE_BUFFER_BEFORE_BRACKET                   \
+while (!buffer.empty() && buffer.end()[-1] != '(') { \
+    ADD_FROM_BUFFER_TO_RESULT                        \
+}                                                    \
+if (buffer.empty())                                  \
     throw std::invalid_argument("missing opening bracket");
 
-#define ALGORITHM_OF_CALL(pushVariable, pushResult, T)             \
+// Алгоритм вызова операторов.
+// pushVariable - действие при переменной,
+// pushOperator - действие при операции,
+// T - тип данных.
+#define ALGORITHM_OF_CALL(pushVariable, pushOperator, T)             \
 for (const auto &symbol: expression) {                             \
     if (operators.isIn(symbol)){                                   \
         auto &currentOperator =                                    \
@@ -43,13 +77,14 @@ for (const auto &symbol: expression) {                             \
         for (int i = 0; i < countOperands; ++i)                    \
             buffer.pop_back();                                     \
                                                                    \
-        pushResult;                                                \
+        pushOperator;                                                \
     } else                                                         \
         pushVariable;                                              \
 }
 
-/// функция которая переводит выражение
-/// из инфиксной формы в обратную польскую нотацию
+/// функция, которая преобразует выражение,
+/// содержащее операторы и операнды,
+/// в постфиксную форму записи.
 /// \tparam T класс  которым оперирует множество операторов
 /// \param expression строка выражения в инфиксной форме
 /// \param operators множество операторов
@@ -57,71 +92,167 @@ for (const auto &symbol: expression) {                             \
 template<class T>
 std::string getExpression(std::string &expression,
                           SetOperator<T> &operators) {
+    // объявление переменных result и buffer,
+    // которые будут использоваться
+    // для хранения результата и
+    // временного хранения символов.
     std::string result, buffer;
+    std::vector<std::pair<std::string, size_t>> ternaryBuffer;
 
-    // итерируемся посимвольно
+    // итерируемся по символам входного выражения.
     for (auto symbol: expression) {
-        // если это символ оператора
+        // проверяем, является ли символ оператором.
         if (operators.isIn(symbol)) {
-            // получаем оператор
+            // получаем оператор, соответствующий текущему символу.
             auto &currentOperator =
                     operators.getOperator(symbol);
 
-            // пока буфер не пуст и на вершине буфера не скобка и
-            // приоритет оператора на вершине буфера больше или равен
-            // приоритету текущего оператора
-            if (!(currentOperator.isPostfix() || currentOperator.isPrefix()))
+            // проверяем, является ли оператор инфиксным.
+            if (!(currentOperator.isPostfix() ||
+                  currentOperator.isPrefix()))
+                // Выполняем цикл, пока буфер не пустой,
+                // символ на вершине буфера не является открывающей скобкой
+                // и приоритет оператора на вершине буфера
+                // больше или равен приоритету текущего оператора.
+                // В цикле мы добавляем символ с вершины буфера
+                // к результату и удаляем его из буфера.
                 while (!buffer.empty() && (buffer.end()[-1]) != '(' &&
                        operators.getOperator(buffer.end()[-1]).
                                getPriority() >=
                        currentOperator.getPriority()) {
-                    // добавляем символ с вершины буфера к результату
-                    // и удаляем его из буфера
-                    result += buffer.end()[-1];
-                    buffer.pop_back();
+                    ADD_FROM_BUFFER_TO_RESULT
                 }
 
 
-            // добавляем текущий символ
-            if (!currentOperator.isPostfix())
-                buffer += symbol;
-            else {
-                result += symbol;
+            // проверяем, не является ли оператор постфиксным.
+            if (!currentOperator.isPostfix()) {
+                if (currentOperator.isInfix() &&
+                    currentOperator.getCountOperands() >= 3)
+                    ternaryBuffer.push_back(
+                            {currentOperator.getSymbol(),
+                             currentOperator.getCountOperands() - 1});
+                buffer += symbol; // добавляем текущий символ к буферу.
+            } else { //  ветка, которая выполняется,
+                //       если оператор является постфиксным.
+                result += symbol; // Добавляем текущий символ к результату.
+                // Если это нулевой арности оператор,
                 if (currentOperator.isNolar())
-                    FREE_PREFIX_BUFFER
+                    // освобождаем из буфера все префиксные операторы.
+                    FREE_FROM_BUFFER_PREFIX_OPERATORS
             }
         } else
+            // проверяем, какой символ встретился.
             switch (symbol) {
-                case ',': // этот случай нужен для тернарных и более операторов
-                    FREE_BUFFER_BEFORE_BRACKET
+                case ',':
+                    // Ветка, которая выполняется, если символ - запятая.
+                    // Используется для разделения операндов в тернарных
+                    // и других многозначных операторах.
+                FREE_BUFFER_BEFORE_BRACKET
                     break;
-                case '(': // добавляем открывающеюся скобку к буферу
+                case ':': {
+                    // Ветка, которая выполняется, если символ - двоеточие.
+                    // Используется для разделения операндов в инфиксных тернарных
+                    // и других многозначных операторах.
+
+                    // Инициализация переменных
+                    // Счетчик операторов, которые нужно добавить к результату.
+                    long long index = 0;
+                    // Флаг для продолжения обработки
+                    bool isContinue = true;
+
+                    // Проверяем операторы в буфере,
+                    // начиная с последнего добавленного.
+                    while (isContinue) {
+                        // Проверяем, находится ли индекс
+                        // в пределах размера буфера,
+                        // и текущий символ в буфере
+                        // не является открывающей скобкой '('.
+                        if (index < buffer.size() &&
+                            buffer.end()[-index - 1] != '(') {
+                            // Получаем текущий оператор из буфера.
+                            auto current =
+                                    operators.getOperator(buffer.end()
+                                                          [-index - 1]);
+
+                            // Проверка, является ли текущий
+                            // оператор текущим тернарным оператором
+                            if (current.getSymbol() ==
+                                ternaryBuffer.end()[-1].first) {
+                                if (ternaryBuffer.
+                                        end()[-1].second > 1) {
+                                    // Если у тернарного оператора
+                                    // ещё есть ожидаемые операнды,
+                                    // уменьшаем счётчик ожидаемых операндов.
+                                    isContinue = false;
+                                    ternaryBuffer.end()[-1].second--;
+                                } else {
+                                    // Если все операнды для данного
+                                    // тернарного оператора обработаны,
+                                    // убираем его из буфера тернарных
+                                    // операторов и инкрементируем индекс.
+                                    ternaryBuffer.pop_back();
+                                    index++;
+                                }
+                            } else
+                                index++;
+                        } else
+                            // Генерируем исключение
+                            // с сообщением "missing ternary operator",
+                            // если не удается найти
+                            // соответствующий тернарный
+                            // оператор в буфере операторов.
+                            // Это обработка случая,
+                            // когда тернарный оператор
+                            // не был правильно представлен в выражении.l
+                            throw std::invalid_argument(
+                                    "missing ternary operator");
+                    }
+
+                    // Добавляем операторы в выходную строку.
+                    for (int i = 0; i < index; ++i) {
+                        result += buffer.end()[-1];
+                        buffer.pop_back();
+                    }
+                }
+                    break;
+                case '(':
+                    // Ветка, которая выполняется,
+                    // если символ - открывающая скобка.
+                    // Добавляем открывающую скобку к буферу.
                     buffer += symbol;
                     break;
-                case ')': { // освобождаем буфер в результат до встречи
-                          // открывающеюся скобки и удаляем её
+                case ')': {
+                    // Ветка, которая выполняется,
+                    // если символ - закрывающая скобка.
+                    // Освобождаем буфер в результат
+                    // до встречи открывающей скобки и удаляем ее.
                     FREE_BUFFER_BEFORE_BRACKET
 
                     buffer.pop_back();
 
-                    FREE_PREFIX_BUFFER
+                    // Освобождаем из буфера все префиксные операторы.
+                    FREE_FROM_BUFFER_PREFIX_OPERATORS
                 }
                     break;
-                default: // это случай когда символ является символом переменной
+                default:
+                    // Ветка, которая выполняется,
+                    // если символ является символом переменной.
+                    // Добавляем символ к результату и
+                    // освобождаем из буфера все префиксные операторы.
                     result += symbol;
-                    FREE_PREFIX_BUFFER
+                    FREE_FROM_BUFFER_PREFIX_OPERATORS
                     break;
             }
     }
 
-    // пока буфер не пустой
+    // Выполняем цикл, пока буфер не пустой.
+    // Получаем символ на вершине буфера и добавляем его к результату.
     while (!buffer.empty()) {
-        // получаем символ на вершине буфера и удаляем его из буфера
         auto symbol = buffer.end()[-1];
         buffer.pop_back();
 
-        // это случится лиш в том случае когда
-        // в ворожении пропущена закрывающая скобка
+        //  выбрасываем исключение,
+        //  если на вершине буфера находится открывающая скобка.
         if (symbol == '(')
             throw std::invalid_argument("missing closing bracket");
 
@@ -129,7 +260,7 @@ std::string getExpression(std::string &expression,
         result += symbol;
     }
 
-    // возвращаем результат
+    // Возвращаем результат преобразования выражения в постфиксную форму.
     return result;
 }
 
@@ -183,19 +314,33 @@ public:
     Function(std::string expression, SetOperator<T> &operators) :
             operators(operators) {
         // перевод выражение из инфиксной формы в обратную польскую нотацию
-        this->expression = getExpression(expression, operators);
-        // получение символов переменных
+        this->expression = getExpression<T>(expression, operators);
+        // Получение имени переменных из выражения
         this->functionVariables = getName(this->expression,
                                           operators);
 
         // проверка на корректность выражения
         int counter = 0;
+        // Перебор символов в выражении
         for (auto symbol: this->expression)
+            // Если символ является оператором
             if (operators.isIn(symbol))
-                counter += operators.getOperator(symbol).getCountOperands() - 1;
+                // Увеличиваем счетчик на количество операндов
+                // (так как из стека будут убраны столько операндов),
+                // обрабатываемых оператором минус один.
+                // (так как после выполнения операции её результат попадёт в стек)
+                counter += operators.
+                        getOperator(symbol).getCountOperands() - 1;
             else
+                // Если символ не является оператором,
+                // уменьшаем счетчик на один
+                // так как он добавится в стек
                 counter -= 1;
 
+        // Если счетчик не равен -1, выбрасываем исключение с сообщением об ошибке
+        // так как Если счетчик равен -1, то в стеке остался один операнд иначе
+        // либо возникнет ситуация, в которой для операции не будет хватать
+        // операндов, либо в результате в стеке будет больше одного операнда.
         if (counter != -1)
             throw std::invalid_argument("invalid expression");
     }
@@ -221,24 +366,62 @@ public:
     /// который содержит набор переменных для вычисления.
     /// \return  Результат вычисления выражения
     T call(SetVariable<T> variables) {
+        // Проверка, что переданные переменные равны переменным функции
         if (!variables.isEqualVariables(functionVariables))
             throw std::invalid_argument(
                     "functionVariables != nameVariables");
 
-        // вектор для вычисления результата
+        // Создание вектора для вычисления результата
         std::vector<T> buffer;
 
-        // алгоритм вычисления выражения в обратной Польской нотации
-        ALGORITHM_OF_CALL(
-                buffer.push_back(variables.getVariable(symbol)),
-                buffer.push_back(currentOperator.
-                        callOperand(currentOperands)),
-                T)
+        // Алгоритм вычисления выражения в обратной польской нотации
+        for (const auto &symbol: expression) {
+            // Если символ является оператором
+            if (operators.isIn(symbol)) {
+                // Получение ссылки на текущий оператор
+                auto &currentOperator = operators.getOperator(symbol);
 
-        // проверка на корректность вычислений
+                // Получение количества операндов у текущего оператора
+                size_t countOperands =
+                        currentOperator.getCountOperands();
+
+                // Проверка, что в буфере достаточно
+                // операндов для выполнения операции
+                if (countOperands > buffer.size())
+                    throw std::invalid_argument("invalid expression");
+
+                // Вектор для хранения текущих операндов
+                std::vector<T> currentOperands;
+
+                // Извлечение операндов из буфера (с конца)
+                for (size_t i = countOperands; i >= 1; --i) {
+                    auto current = buffer.end()[-i];
+                    currentOperands.push_back(current);
+                }
+
+                // Удаление из буфера извлеченных операндов
+                for (int i = 0; i < countOperands; ++i)
+                    buffer.pop_back();
+
+                // Выполнение операции с текущими
+                // операндами и добавление результата в буфер
+                buffer.push_back(currentOperator.
+                        callOperand(currentOperands));
+            }
+                // Если символ является переменной
+            else {
+                // Получение значения переменной из
+                // переданных переменных и добавление в буфер
+                buffer.push_back(variables.getVariable(symbol));
+            }
+        }
+
+        // Проверка на корректность вычислений
+        // должен остаться только один элемент в буфере
         if (buffer.size() != 1)
             throw std::invalid_argument("invalid expression");
 
+        // Возвращение результата вычислений
         return buffer[0];
     }
 
@@ -265,7 +448,8 @@ public:
     }
 
     /// Метод класса Function преобразует собственное выражение,
-    /// записанное в обратной Польской нотации в инфиксную форму.
+    /// записанное в обратной Польской нотации
+    /// в нотацию соответствующую operators.
     /// \return инфиксную форма выражения
     std::string getReversExpression() {
         // пустой буфер (вектор строк)
@@ -274,7 +458,8 @@ public:
         // алгоритм преобразования выражения,
         // записанного в обратной Польской нотации в инфиксную форму.
         ALGORITHM_OF_CALL(
-                buffer.emplace_back(std::string{symbol}, std::string{symbol}),
+                buffer.emplace_back(std::string{symbol},
+                                    std::string{symbol}),
                 buffer.push_back(operators.getRevers(currentOperands,
                                                      symbol)),
                 std::pair<std::string comma std::string>);
@@ -287,6 +472,5 @@ public:
         return buffer[0].first;
     }
 };
-
 
 #endif //REVERSEPOLISHNOTATION_FUNCTION_H
