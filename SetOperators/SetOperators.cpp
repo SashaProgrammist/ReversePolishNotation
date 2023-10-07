@@ -64,3 +64,31 @@ SetOperator<bool> boolAlg() {
 
     return result;
 }
+
+SetOperator<small> octagonOfResonanceRing() {
+    OperatorFunction<small> plus{
+            2, 0, "+",
+            [](std::vector<small> operands) -> small {
+                return (operands[0] ^ operands[1]) & 7;
+            }
+    };
+    OperatorFunction<small> multiply{
+            2, 1, "*",
+            [](std::vector<small> operands) -> small {
+                std::vector masks{
+                        operands[1] & 1 ? 7 : 0,
+                        operands[1] & 2 ? 7 : 0,
+                        operands[1] & 4 ? 7 : 0,
+                };
+
+                return (operands[0] & masks[0]) ^
+                       ((operands[0] << 1 |
+                         (operands[0] >> 2) & 1) & masks[1]) ^
+                       ((operands[0] << 2 |
+                         (operands[0] >> 1) & 3) & masks[2]);
+            }
+    };
+
+    return SetOperator<small>(
+            std::vector({plus, multiply}));
+}
