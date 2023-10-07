@@ -65,6 +65,7 @@ void example2() {
     std::cout << function.call(setVariable) << std::endl;
 }
 
+// Макрос для создания оператора, представляющего константное число.
 #define NUMBER(name, n)\
 OperatorFunction<int> name{\
         0, 6, std::string{n + '0'},\
@@ -117,37 +118,64 @@ void example3() {
                 return operands[0] - operands[1];
             }, infix
     };
+    OperatorFunction<int> f{
+            2, 2, "$",
+            [](std::vector<int> operands) {
+                return operands[0] - operands[1];
+            }, infix
+    };
+    OperatorFunction<int> g{
+            2, 1, "&",
+            [](std::vector<int> operands) {
+                return operands[0] - operands[1];
+            }, infix
+    };
+    OperatorFunction<int> k{
+            3, 0, "?",
+            [](std::vector<int> operands) {
+                return operands[0] ? operands[1] : operands[2];
+            }, infix
+    };
 
     SetOperator setOperator{std::vector{
             number0, number1, number2, number3, number4,
             number5, number6, number7, number8, number9,
-            a, b, c, d, e
+            a, b, c, d, e, f, g, k
     }};
 
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         std::string formula1 =
                 generatorFormula(setOperator,
                                  "0123456789ABCD",
-                                 5);
+                                 6);
+        try {
+            Function<int> function1(formula1, setOperator);
+            std::string formula2 = function1.getReversExpression();
+            Function<int> function2(formula2, setOperator);
 
-        Function<int> function1(formula1, setOperator);
-        std::string formula2 = function1.getReversExpression();
-        Function<int> function2(formula2, setOperator);
-
-        if (function1.getFunctionExpression() !=
-            function2.getFunctionExpression())
-            std::cout << formula1
-                      << std::endl
-                      << formula2
-                      << std::endl
-                      << function1.getFunctionExpression()
-                      << std::endl
-                      << function2.getFunctionExpression()
-                      << std::endl;
+            if (function1.getFunctionExpression() !=
+                function2.getFunctionExpression())
+                std::cout << formula1 << std::endl
+                          << formula2 << std::endl
+                          << function1.getFunctionExpression() << std::endl
+                          << function2.getFunctionExpression() << std::endl;
 
 
-        assert(function1.getFunctionExpression() ==
-               function2.getFunctionExpression());
+            assert(function1.getFunctionExpression() ==
+                   function2.getFunctionExpression());
+        } catch (std::invalid_argument &e) {
+            std::cout << formula1 << std::endl;
+
+            Function<int> function1(formula1, setOperator);
+            std::string formula2 = function1.getReversExpression();
+            std::cout << formula2 << std::endl;
+
+            Function<int> function2(formula2, setOperator);
+            std::cout << function1.getFunctionExpression() << std::endl
+                      << function2.getFunctionExpression() << std::endl;
+
+            throw e;
+        }
     }
 
     for (int i = 0; i < 10; ++i) {
@@ -187,10 +215,124 @@ void example3() {
     }
 }
 
+void example4() {
+    // Создание операторов для чисел от 0 до 3.
+    NUMBER(number0, 0)
+    NUMBER(number1, 1)
+    NUMBER(number2, 2)
+    NUMBER(number3, 3)
+
+    // Оператор унарного минуса.
+    OperatorFunction<int> unaryMinus{
+            1, 4, "-", // Один операнд, приоритет 4, символ "-".
+            [](std::vector<int> operands) {
+                return -operands[0]; // Префиксный унарный минус.
+            }, prefix // Указываем, что это префиксный оператор.
+    };
+
+    // Оператор сложения.
+    OperatorFunction<int> plus{
+            2, 3, "+", // два операнда, приоритет 3, символ "+".
+            [](std::vector<int> operands) {
+                return operands[0] + operands[1];
+            }, infix // Указываем, что это инфиксный оператор.
+    };
+
+    // Оператор сравнения
+    OperatorFunction<int> lessThan{
+            2, 2, "<", // два операнда, приоритет 2, символ "<".
+            [](std::vector<int> operands) {
+                return int(operands[0] < operands[1]);
+            }, infix // Указываем, что это инфиксный оператор.
+    };
+
+    // Оператор тернарного условия (инфиксный).
+    OperatorFunction<int> ternary{
+            3, 1, "?", // три операнда, приоритет 1, символ "?".
+            [](std::vector<int> operands) {
+                return operands[0] ? operands[1] : operands[2];
+            }, infix // Указываем, что это инфиксный оператор.
+    };
+
+    // Оператор с четырьмя операндами (инфиксный).
+    OperatorFunction<int> quadronary{
+            4, 0, "#", // четыре операнда, приоритет 0, символ "#".
+            [](std::vector<int> operands) {
+                return operands[0] * operands[1] -
+                       operands[2] * operands[3];
+            }, infix // Указываем, что это инфиксный оператор.
+    };
+
+    // Создание множества операторов.
+    SetOperator<int> setOperator{std::vector{
+            number0, number1, number2, number3,
+            ternary, plus, quadronary, lessThan,
+            unaryMinus
+    }};
+
+    // Примеры выражений.
+    auto examples = std::vector{
+            "a<b?a:b",
+            "0<x?x:(x<0?-x:0)",
+            "0+1?(3#2+2:2+1:0):3+2",
+            "1#1?2:1:0?2:1:1",
+    };
+
+    // Проход по примерам и вывод результатов.
+    for (auto expression: examples) {
+        std::string current = expression;
+        std::cout << expression << " ~ "
+                  << getExpression(current,
+                                   setOperator)
+                  << std::endl;
+    }
+
+//    for (auto expression: examples) {
+//        Function<int> function(expression, setOperator);
+//
+//        std::cout << expression << std::endl
+//                  << function.getFunctionExpression()
+//                  << std::endl
+//                  << function.call(SetVariable<int>(
+//                          std::map<std::string, int>{}))
+//                  << std::endl << std::endl;
+//    }
+}
+
+void example5() {
+    auto alg = octagonOfResonanceRing();
+
+    Function<small> function("A*B", alg);
+
+    std::map<std::string, small> map{
+            {"A", 0},
+            {"B", 0},
+    };
+
+    std::cout << "| * | ";
+    for (small b = 0; b < 8; ++b)
+        std::cout << b << " | ";
+    std::cout << std::endl;
+    for (small _ = 0; _ <= 8; ++_)
+        std::cout << "|---";
+    std::cout << "|" << std::endl;
+
+    for (small a = 0; a < 8; ++a) {
+        std::cout << "| " << a << " | ";
+        for (small b = 0; b < 8; ++b) {
+            map["A"] = a;
+            map["B"] = b;
+            SetVariable set{map};
+            std::cout << function.call(set) << " | ";
+        }
+        std::cout << std::endl;
+    }
+}
+
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-    example3();
+    example5();
 
     return 0;
 }
