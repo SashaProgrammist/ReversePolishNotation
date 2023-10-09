@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cassert>
+#include <utility>
+#include <strstream>
 
 #include "SetOperators/SetOperators.h"
 #include "GeneratorFormula/GeneratorFormula.h"
@@ -38,11 +40,13 @@ void example1() {
     int A(2);
     int B(3);
     int C(4);
-    SetVariable<int> setVariable{std::map<std::string, int>{
-            {"A", A},
-            {"B", B},
-            {"C", C},
-    }};
+    SetVariable<int,
+            std::map<std::string, int>>
+            setVariable{{
+                                {"A", A},
+                                {"B", B},
+                                {"C", C},
+                        }};
 
     int result = function.call(setVariable);
 
@@ -60,18 +64,18 @@ void example2() {
 
     std::cout << function.getReversExpression() << std::endl;
 
-    SetVariable<bool> setVariable{std::map<std::string, bool>{}};
+    SetVariable<bool,
+            std::map<std::string, bool>>
+            setVariable{{}};
 
     std::cout << function.call(setVariable) << std::endl;
 }
 
 // Макрос для создания оператора, представляющего константное число.
-#define NUMBER(name, n)\
-OperatorFunction<int> name{\
-        0, 6, std::string{n + '0'},\
-        []([[maybe_unused]] std::vector<int> operands){\
-            return n;\
-        }\
+#define NUMBER(name, n)       \
+OperatorFunction<int> name{   \
+        std::string{n + '0'}, \
+        n                     \
 };
 
 void example3() {
@@ -164,6 +168,7 @@ void example3() {
             assert(function1.getFunctionExpression() ==
                    function2.getFunctionExpression());
         } catch (std::invalid_argument &e) {
+            std::cout << "error" << std::endl;
             std::cout << formula1 << std::endl;
 
             Function<int> function1(formula1, setOperator);
@@ -190,8 +195,9 @@ void example3() {
                   << " = "
                   << function.getReversExpression()
                   << " = "
-                  << function.call(SetVariable<int>(
-                          std::map<std::string, int>{}))
+                  << function.call(SetVariable<int,
+                          std::map<std::string, int>>(
+                          {}))
                   << std::endl;
     }
 
@@ -206,8 +212,9 @@ void example3() {
                       << " = "
                       << function.getReversExpression()
                       << " = "
-                      << function.call(SetVariable<int>(
-                              std::map<std::string, int>{}))
+                      << function.call(SetVariable<int,
+                              std::map<std::string, int>>(
+                              {}))
                       << std::endl;
         } catch (std::invalid_argument &e) {
             std::cout << e.what() << std::endl;
@@ -299,17 +306,21 @@ void example4() {
 //    }
 }
 
-void example5() {
+void example5(const std::string &symbol = "*") {
     auto alg = octagonOfResonanceRing();
 
-    Function<small> function("A*B", alg);
+    Function<small> function("A" + symbol + "B", alg);
 
     std::map<std::string, small> map{
             {"A", 0},
             {"B", 0},
     };
+    SetVariable<small,
+            std::map<std::string,
+                    small> &>
+            set{map};
 
-    std::cout << "| * | ";
+    std::cout << ("| " + symbol + " | ");
     for (small b = 0; b < 8; ++b)
         std::cout << b << " | ";
     std::cout << std::endl;
@@ -322,17 +333,128 @@ void example5() {
         for (small b = 0; b < 8; ++b) {
             map["A"] = a;
             map["B"] = b;
-            SetVariable set{map};
             std::cout << function.call(set) << " | ";
         }
         std::cout << std::endl;
     }
 }
 
+unsigned getLen(unsigned value) {
+    if (!value)
+        return 1;
+
+    unsigned len = 0;
+    while (value) {
+        value /= 10;
+        len++;
+    }
+    return len;
+}
+
+void example6(const std::string &symbol = "*",
+              unsigned count = 10) {
+    auto alg = haloOfVariableWorldsRing();
+
+    Function<unsigned> function("A" + symbol + "B", alg);
+
+    std::map<std::string, unsigned> map{
+            {"A", 0},
+            {"B", 0},
+    };
+    SetVariable<unsigned,
+            std::map<std::string,
+                    unsigned> &>
+            set{map};
+
+    unsigned countBit = 0;
+    unsigned temp = count;
+    while (temp) {
+        countBit++;
+        temp >>= 1;
+    }
+    unsigned maxResult = symbol == "+" ?
+                         (1 << countBit) - 1 :
+                         (1 << ((countBit - 1) * 2));
+    unsigned lenMax = getLen(maxResult);
+
+    std::cout << "| ";
+    for (unsigned i = 1; i < lenMax; ++i)
+        std::cout << " ";
+    std::cout << symbol << " | ";
+
+    for (unsigned b = 0; b < count; ++b) {
+        unsigned len = getLen(b);
+        for (unsigned i = len; i < lenMax; ++i)
+            std::cout << " ";
+        std::cout << b << " | ";
+    }
+    std::cout << std::endl;
+
+    for (unsigned i = 0; i <= count; ++i) {
+        std::cout << "|--";
+        for (unsigned j = 0; j < lenMax; ++j)
+            std::cout << "-";
+    }
+    std::cout << "|" << std::endl;
+
+    for (unsigned a = 0; a < count; ++a) {
+        unsigned len = getLen(a);
+        std::cout << "| ";
+        for (unsigned i = len; i < lenMax; ++i)
+            std::cout << " ";
+        std::cout << a << " | ";
+        for (unsigned b = 0; b < count; ++b) {
+            map["A"] = a;
+            map["B"] = b;
+            unsigned result = function.call(set);
+            len = getLen(result);
+            for (unsigned i = len; i < lenMax; ++i)
+                std::cout << " ";
+            std::cout << result << " | ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+void example7(std::string formula, unsigned rightBorder = 100) {
+    auto alg = haloOfVariableWorldsRing();
+
+    Function function(std::move(formula), alg);
+
+    std::map<std::string, unsigned> map{
+            {"X", 0},
+    };
+    SetVariable<unsigned,
+            std::map<std::string,
+                    unsigned> &>
+            set{map};
+
+    std::strstream result;
+    result << "[";
+    for (unsigned x = 0; x <= rightBorder; ++x) {
+        map["X"] = x;
+        unsigned y = function.call(set);
+
+        result << "("
+               << x
+               << ", "
+               << y
+               << "), ";
+    }
+
+    std::string resultStr = result.str();
+    resultStr.pop_back();
+    resultStr.pop_back();
+
+    std::cout << resultStr << "]";
+}
+
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-    example5();
+    example7("(X+_20)*(X+_80)+_15000", 256);
 
     return 0;
 }
+
+

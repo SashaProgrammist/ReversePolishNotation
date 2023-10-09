@@ -92,7 +92,7 @@ for (const auto &symbol: expression) {                             \
 template<class T>
 std::string getExpression(std::string &expression,
                           SetOperator<T> &operators) {
-    // объявление переменных result и buffer,
+    // объявление переменных resultIfNolar и buffer,
     // которые будут использоваться
     // для хранения результата и
     // временного хранения символов.
@@ -365,7 +365,8 @@ public:
     /// \param variables объект типа SetVariable<T>,
     /// который содержит набор переменных для вычисления.
     /// \return  Результат вычисления выражения
-    T call(SetVariable<T> variables) {
+    template<class map>
+    T call(SetVariable<T, map> variables) {
         // Проверка, что переданные переменные равны переменным функции
         if (!variables.isEqualVariables(functionVariables))
             throw std::invalid_argument(

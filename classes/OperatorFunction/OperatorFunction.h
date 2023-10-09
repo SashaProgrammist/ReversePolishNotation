@@ -1,6 +1,7 @@
 #ifndef REVERSEPOLISHNOTATION_OPERATORFUNCTION_H
 #define REVERSEPOLISHNOTATION_OPERATORFUNCTION_H
 
+#include <utility>
 #include <vector>
 #include <stdexcept>
 #include <map>
@@ -21,9 +22,11 @@ enum NotationType {
 template<class T>
 class OperatorFunction {
 private:
-    size_t countOperands{};   // Количество операндов для этого оператора
-    size_t priority{};        // Приоритет оператора
+    size_t countOperands{0};   // Количество операндов для этого оператора
+    size_t priority{0};        // Приоритет оператора
     std::string symbol;       // Символ оператора
+
+    T resultIfNolar;
 
     T (*init)(std::vector<T>); // Функция оператора
 
@@ -31,6 +34,13 @@ private:
 
 public:
     OperatorFunction() = default;
+
+    OperatorFunction(std::string symbol,
+                     T value) :
+            symbol(std::move(symbol)),
+            resultIfNolar(value),
+            init(nullptr),
+            notationType(postfix) {}
 
     // Конструктор класса OperatorFunction
     OperatorFunction(size_t countOperands,
@@ -42,6 +52,11 @@ public:
             priority(priority),
             symbol(std::move(symbol)),
             init(init), notationType(type) {
+
+        if (init == nullptr)
+            throw std::invalid_argument(
+                    "init == nullptr non incorrect");
+
         // Если тип нотации не задан, определить его на основе количества операндов
         if (notationType == uncertain)
             switch (countOperands) {
@@ -66,9 +81,10 @@ public:
             throw std::invalid_argument(
                     "number of operands does not match");
 
-        T result = init(operands);
-
-        return result;
+        if (init != nullptr)
+            return init(operands);
+        else
+            return resultIfNolar;
     }
 
 

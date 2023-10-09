@@ -6,12 +6,12 @@
 #include <stdexcept>
 
 
-template<class T>
+template<class T, class map>
 class SetVariable {
 private:
     // Ассоциативный контейнер для
     // хранения переменных и их значений.
-    std::map<std::string, T> setVariable;
+    map setVariable;
 
     // Строка для хранения имен всех переменных.
     std::string nameVariables;
@@ -19,7 +19,7 @@ private:
 public:
     /// Инициализация объекта SetVariable
     /// с заданным набором переменных и их значений.
-    explicit SetVariable(std::map<std::string, T> setVariable) :
+    explicit SetVariable(map setVariable) :
             setVariable(setVariable) {
         for (auto variable: this->setVariable)
             nameVariables += variable.first;
