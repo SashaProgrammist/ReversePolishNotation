@@ -311,10 +311,13 @@ public:
     /// инициализатор класса Function
     /// \param expression  строка выражения в обычной нотации
     /// \param operators множество операторов
-    Function(std::string expression, SetOperator<T> &operators) :
+    Function(std::string expression, SetOperator<T> &operators, bool isTranslate = true) :
             operators(operators) {
         // перевод выражение из инфиксной формы в обратную польскую нотацию
-        this->expression = getExpression<T>(expression, operators);
+        if (isTranslate)
+            this->expression = getExpression<T>(expression, operators);
+        else
+            this->expression = expression;
         // Получение имени переменных из выражения
         this->functionVariables = getName(this->expression,
                                           operators);

@@ -74,6 +74,10 @@ public:
     T &getVariable(const char symbol) {
         return getVariable(std::string{symbol});
     }
+
+    map getMap(){
+        return setVariable;
+    }
 };
 
 #endif //REVERSEPOLISHNOTATION_VARIABLE_H
